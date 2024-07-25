@@ -37,11 +37,9 @@
 
 ### Subsets by gender ##########################################################
 
-  men_1st <- estdata |> filter(gender==1 & wave%in%1:8)
-  men_2nd <- estdata |> filter(gender==1 & wave%in%9:15)
-  women_1st <- estdata |> filter(gender==2 & wave%in%1:8)
-  women_2nd <- estdata |> filter(gender==2 & wave%in%9:15)
-  
+  men <- estdata |> filter(gender==1)
+  women <- estdata |> filter(gender==2)
+
   
 ### General settings ###########################################################
   
@@ -70,49 +68,102 @@
 ### Function for analysis ######################################################
 
   bootfun <- function(data,dtms) {
+    
+    cat(".")
+    
+    # Split data
+    first <- data |> filter(wave%in%1:8)
+    secon <- data |> filter(wave%in%9:15)
   
     # Model
-    fit <- dtms_fit(data=data,controls=controls)
+    fit1 <- dtms_fit(data=first,controls=controls)
+    fit2 <- dtms_fit(data=secon,controls=controls)
     
     # Predict probabilities
-    probs_low <- dtms_transitions(dtms=dtms,model=fit,controls=low)
-    probs_med <- dtms_transitions(dtms=dtms,model=fit,controls=med)
-    probs_hig <- dtms_transitions(dtms=dtms,model=fit,controls=hig)
+    probs1_low <- dtms_transitions(dtms=dtms,model=fit1,controls=low)
+    probs1_med <- dtms_transitions(dtms=dtms,model=fit1,controls=med)
+    probs1_hig <- dtms_transitions(dtms=dtms,model=fit1,controls=hig)
+    probs2_low <- dtms_transitions(dtms=dtms,model=fit2,controls=low)
+    probs2_med <- dtms_transitions(dtms=dtms,model=fit2,controls=med)
+    probs2_hig <- dtms_transitions(dtms=dtms,model=fit2,controls=hig)
     
     # Transition matrices
-    Tm_low <- dtms_matrix(dtms=dtms,probs=probs_low)
-    Tm_med <- dtms_matrix(dtms=dtms,probs=probs_med)
-    Tm_hig <- dtms_matrix(dtms=dtms,probs=probs_hig)
+    Tm1_low <- dtms_matrix(dtms=dtms,probs=probs1_low)
+    Tm1_med <- dtms_matrix(dtms=dtms,probs=probs1_med)
+    Tm1_hig <- dtms_matrix(dtms=dtms,probs=probs1_hig)
+    Tm2_low <- dtms_matrix(dtms=dtms,probs=probs2_low)
+    Tm2_med <- dtms_matrix(dtms=dtms,probs=probs2_med)
+    Tm2_hig <- dtms_matrix(dtms=dtms,probs=probs2_hig)
     
     # Starting distribution (correct, but small sample sizes) 
-    S_low <- dtms_start(dtms=dtms,data=data,start_time=c(50:56),variables=list(education=factor("0",levels=c("0","1","2"))))
-    S_med <- dtms_start(dtms=dtms,data=data,start_time=c(50:56),variables=list(education=factor("1",levels=c("0","1","2"))))
-    S_hig <- dtms_start(dtms=dtms,data=data,start_time=c(50:56),variables=list(education=factor("2",levels=c("0","1","2"))))
+    S1_low <- dtms_start(dtms=dtms,data=first,start_time=c(50:56),variables=list(education=factor("0",levels=c("0","1","2"))))
+    S1_med <- dtms_start(dtms=dtms,data=first,start_time=c(50:56),variables=list(education=factor("1",levels=c("0","1","2"))))
+    S1_hig <- dtms_start(dtms=dtms,data=first,start_time=c(50:56),variables=list(education=factor("2",levels=c("0","1","2"))))
+    S2_low <- dtms_start(dtms=dtms,data=secon,start_time=c(50:56),variables=list(education=factor("0",levels=c("0","1","2"))))
+    S2_med <- dtms_start(dtms=dtms,data=secon,start_time=c(50:56),variables=list(education=factor("1",levels=c("0","1","2"))))
+    S2_hig <- dtms_start(dtms=dtms,data=secon,start_time=c(50:56),variables=list(education=factor("2",levels=c("0","1","2"))))
     
-    # Expectancies
-    resexp <- rbind(
-      data.frame(education=0,start=c("Not imp.","impaired","AVERAGE"),dtms_expectancy(dtms=dtms,matrix=Tm_low,start_distr=S_low)),
-      data.frame(education=1,start=c("Not imp.","impaired","AVERAGE"),dtms_expectancy(dtms=dtms,matrix=Tm_med,start_distr=S_med)),
-      data.frame(education=2,start=c("Not imp.","impaired","AVERAGE"),dtms_expectancy(dtms=dtms,matrix=Tm_hig,start_distr=S_hig))
+    # 1: Expectancies
+    resexp1 <- rbind(
+      data.frame(education=0,start=c("Not imp.","impaired","AVERAGE"),dtms_expectancy(dtms=dtms,matrix=Tm1_low,start_distr=S1_low)),
+      data.frame(education=1,start=c("Not imp.","impaired","AVERAGE"),dtms_expectancy(dtms=dtms,matrix=Tm1_med,start_distr=S1_med)),
+      data.frame(education=2,start=c("Not imp.","impaired","AVERAGE"),dtms_expectancy(dtms=dtms,matrix=Tm1_hig,start_distr=S1_hig))
     )
     
-    # Difference to high educated, AVERAGE
-    resexp$diff <- resexp$impaired-resexp$impaired[resexp$start=="AVERAGE" & resexp$education==2]
+    # 1: Difference to high educated, AVERAGE
+    resexp1$diff <- resexp1$impaired-resexp1$impaired[resexp1$start=="AVERAGE" & resexp1$education==2]
     
-    # Lifetime risk
-    # dtms_risk(risk="impaired",dtms=dtms,matrix=Tm_low,start_distr=S_low)
-    # dtms_risk(risk="impaired",dtms=dtms,matrix=Tm_med,start_distr=S_med)
-    # dtms_risk(risk="impaired",dtms=dtms,matrix=Tm_hig,start_distr=S_hig)
-    return(resexp)
+    # 1: Risk
+    tmp1 <- dtms_risk(risk="impaired",dtms=dtms,matrix=Tm1_low,start_distr=S1_low)
+    tmp2 <- dtms_risk(risk="impaired",dtms=dtms,matrix=Tm1_med,start_distr=S1_med)
+    tmp3 <- dtms_risk(risk="impaired",dtms=dtms,matrix=Tm1_hig,start_distr=S1_hig)
+    resexp1$risk <- c(tmp1[1:3],tmp2[1:3],tmp3[1:3])
+    resexp1$riskdiff <- resexp1$risk-resexp1$risk[resexp1$start=="AVERAGE" & resexp1$education==2]
+    resexp1$time <- 1
+    
+    # 2: Expectancies
+    resexp2 <- rbind(
+      data.frame(education=0,start=c("Not imp.","impaired","AVERAGE"),dtms_expectancy(dtms=dtms,matrix=Tm2_low,start_distr=S2_low)),
+      data.frame(education=1,start=c("Not imp.","impaired","AVERAGE"),dtms_expectancy(dtms=dtms,matrix=Tm2_med,start_distr=S2_med)),
+      data.frame(education=2,start=c("Not imp.","impaired","AVERAGE"),dtms_expectancy(dtms=dtms,matrix=Tm2_hig,start_distr=S2_hig))
+    )
+    
+    # 2: Difference to high educated, AVERAGE
+    resexp2$diff <- resexp2$impaired-resexp2$impaired[resexp2$start=="AVERAGE" & resexp2$education==2]
+    
+    # 2: Risk
+    tmp1 <- dtms_risk(risk="impaired",dtms=dtms,matrix=Tm2_low,start_distr=S2_low)
+    tmp2 <- dtms_risk(risk="impaired",dtms=dtms,matrix=Tm2_med,start_distr=S2_med)
+    tmp3 <- dtms_risk(risk="impaired",dtms=dtms,matrix=Tm2_hig,start_distr=S2_hig)
+    resexp2$risk <- c(tmp1[1:3],tmp2[1:3],tmp3[1:3])
+    resexp2$riskdiff <- resexp2$risk-resexp2$risk[resexp2$start=="AVERAGE" & resexp2$education==2]
+    resexp2$time <- 2
+    
+    # Combine
+    resexp <- rbind(resexp1,resexp2)
+    
+    # Drop start variable
+    resexp <- resexp |> select(!start)
+    
+    # Return
+    return(as.matrix(resexp))
   
   }
 
+  
 ### Quick results ##############################################################  
 
-  men_res1st <- bootfun(data=men_1st,dtms=hrspredict)
-  men_res2nd <- bootfun(data=men_2nd,dtms=hrspredict)
-  women_res1st <- bootfun(data=women_1st,dtms=hrspredict)
-  women_res2nd <- bootfun(data=women_2nd,dtms=hrspredict)
+  men_res <- bootfun(data=men,dtms=hrspredict)
+  women_res <- bootfun(data=women,dtms=hrspredict)
   
+  
+### Very quick bootstrap #######################################################
+  
+  men_boot <- dtms_boot(data=men,dtms=hrspredict,fun=bootfun,rep=100,method="block",verbose=T)
+  women_boot <- dtms_boot(data=women,dtms=hrspredict,fun=bootfun,rep=100,method="block",verbose=T)
 
 
+### Save results ###############################################################
+  
+  save(list=c("men_res","women_res","men_boot","women_boot"),
+       file="Results/over_time.Rda")
