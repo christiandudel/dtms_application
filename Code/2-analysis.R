@@ -139,6 +139,13 @@
     resexp2$riskdiff <- resexp2$risk-resexp2$risk[resexp2$start=="AVERAGE" & resexp2$education==2]
     resexp2$time <- 2
     
+    # Differences over time
+    resexp1$diffdiff <- 0
+    resexp1$riskdiffdiff <- 0
+    
+    resexp2$diffdiff <- resexp2$diff-resexp1$diff
+    resexp2$riskdiffdiff <- resexp2$riskdiff-resexp1$riskdiff
+    
     # Combine
     resexp <- rbind(resexp1,resexp2)
     
@@ -159,11 +166,12 @@
   
 ### Very quick bootstrap #######################################################
   
-  men_boot <- dtms_boot(data=men,dtms=hrspredict,fun=bootfun,rep=100,method="block",verbose=T)
-  women_boot <- dtms_boot(data=women,dtms=hrspredict,fun=bootfun,rep=100,method="block",verbose=T)
+  men_boot <- dtms_boot(data=men,dtms=hrspredict,fun=bootfun,rep=1000,method="block",verbose=T)
+  women_boot <- dtms_boot(data=women,dtms=hrspredict,fun=bootfun,rep=1000,method="block",verbose=T)
 
 
 ### Save results ###############################################################
   
   save(list=c("men_res","women_res","men_boot","women_boot"),
        file="Results/over_time.Rda")
+  
