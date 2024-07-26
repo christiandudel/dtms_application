@@ -39,7 +39,18 @@
 
   men <- estdata |> filter(gender==1)
   women <- estdata |> filter(gender==2)
-
+  
+  
+### Sample size ################################################################
+  
+  # No of transitions
+  dim(men)[1]+dim(women)[1]
+  
+  # No of individuals
+  nmen <- men |> pull(id) |> unique() |> length()
+  nwomen <- women |> pull(id) |> unique() |> length()
+  nmen+nwomen
+  
   
 ### General settings ###########################################################
   
