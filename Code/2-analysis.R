@@ -186,3 +186,38 @@
   save(list=c("men_res","women_res","men_boot","women_boot"),
        file="Results/over_time.Rda")
   
+  
+### Comparison full vs reduced #################################################
+  
+  # Split data
+  menfirst <- men |> filter(wave%in%1:8)
+  mensecon <- men |> filter(wave%in%9:15)
+  
+  # Model, reduced
+  fit1m <- dtms_fit(data=menfirst,controls=controls,package="mclogit")
+  fit2m <- dtms_fit(data=mensecon,controls=controls,package="mclogit")
+  
+  # Model, full
+  full1m <- dtms_fullfit(data=menfirst,controls=controls,package="mclogit")
+  full2m <- dtms_fullfit(data=mensecon,controls=controls,package="mclogit")
+  
+  # Likelihood ratio test, first period
+  llfit1m <- logLik(fit1m)
+  llfull1m <- logLik(full1m)
+  
+  lldiff <- -2 * (llfit1m[1]-llfull1m[1])
+  dftest <- attr(llfull1m,"df")-attr(llfit1m,"df")
+  
+  pchisq(lldiff, df = teststat, lower.tail = FALSE)
+  
+  # Likelihood ratio test, second period
+  llfit2m <- logLik(fit2m)
+  llfull2m <- logLik(full2m)
+  
+  lldiff <- -2 * (llfit2m[1]-llfull2m[1])
+  dftest <- attr(llfull2m,"df")-attr(llfit2m,"df")
+  
+  pchisq(lldiff, df = teststat, lower.tail = FALSE)
+
+
+  
