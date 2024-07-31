@@ -90,3 +90,4 @@
   
   # Combine
   total <- rbind(men_total,women_total)
+  

@@ -2,6 +2,7 @@
 
   library(dtms)
   library(tidyverse)
+  library(lmtest)
 
 
 ### Load data ##################################################################
@@ -50,7 +51,27 @@
   nmen <- men |> pull(id) |> unique() |> length()
   nwomen <- women |> pull(id) |> unique() |> length()
   nmen+nwomen
+
   
+### Comparison full vs reduced #################################################
+
+  # Controls
+  controls <- c("time","time2")  
+    
+  # Model, reduced
+  fit1m <- dtms_fit(data=men,controls=controls,package="mclogit")
+  fit1w <- dtms_fit(data=women,controls=controls,package="mclogit")
+  
+  # Model, full
+  full1m <- dtms_fullfit(data=men,controls=controls,package="mclogit")
+  full1w <- dtms_fullfit(data=women,controls=controls,package="mclogit")
+  
+  # Likelihood ratio test, men
+  lrtest(fit1m,full1m)
+  
+  # Likelihood ratio test, women
+  lrtest(fit1w,full1w)
+
   
 ### General settings ###########################################################
   
@@ -87,16 +108,16 @@
     secon <- data |> filter(wave%in%9:15)
   
     # Model
-    fit1 <- dtms_fit(data=first,controls=controls)
-    fit2 <- dtms_fit(data=secon,controls=controls)
+    fit1 <- dtms_fullfit(data=first,controls=controls)
+    fit2 <- dtms_fullfit(data=secon,controls=controls)
     
     # Predict probabilities
-    probs1_low <- dtms_transitions(dtms=dtms,model=fit1,controls=low)
-    probs1_med <- dtms_transitions(dtms=dtms,model=fit1,controls=med)
-    probs1_hig <- dtms_transitions(dtms=dtms,model=fit1,controls=hig)
-    probs2_low <- dtms_transitions(dtms=dtms,model=fit2,controls=low)
-    probs2_med <- dtms_transitions(dtms=dtms,model=fit2,controls=med)
-    probs2_hig <- dtms_transitions(dtms=dtms,model=fit2,controls=hig)
+    probs1_low <- dtms_transitions(dtms=dtms,model=fit1,controls=low,se=F)
+    probs1_med <- dtms_transitions(dtms=dtms,model=fit1,controls=med,se=F)
+    probs1_hig <- dtms_transitions(dtms=dtms,model=fit1,controls=hig,se=F)
+    probs2_low <- dtms_transitions(dtms=dtms,model=fit2,controls=low,se=F)
+    probs2_med <- dtms_transitions(dtms=dtms,model=fit2,controls=med,se=F)
+    probs2_hig <- dtms_transitions(dtms=dtms,model=fit2,controls=hig,se=F)
     
     # Transition matrices
     Tm1_low <- dtms_matrix(dtms=dtms,probs=probs1_low)
@@ -169,13 +190,13 @@
   }
 
   
-### Quick results ##############################################################  
+### Main results ###############################################################  
 
   men_res <- bootfun(data=men,dtms=hrspredict)
   women_res <- bootfun(data=women,dtms=hrspredict)
   
   
-### Very quick bootstrap #######################################################
+### Bootstrap ##################################################################
   
   men_boot <- dtms_boot(data=men,dtms=hrspredict,fun=bootfun,rep=1000,method="block",verbose=T)
   women_boot <- dtms_boot(data=women,dtms=hrspredict,fun=bootfun,rep=1000,method="block",verbose=T)
@@ -185,39 +206,4 @@
   
   save(list=c("men_res","women_res","men_boot","women_boot"),
        file="Results/over_time.Rda")
-  
-  
-### Comparison full vs reduced #################################################
-  
-  # Split data
-  menfirst <- men |> filter(wave%in%1:8)
-  mensecon <- men |> filter(wave%in%9:15)
-  
-  # Model, reduced
-  fit1m <- dtms_fit(data=menfirst,controls=controls,package="mclogit")
-  fit2m <- dtms_fit(data=mensecon,controls=controls,package="mclogit")
-  
-  # Model, full
-  full1m <- dtms_fullfit(data=menfirst,controls=controls,package="mclogit")
-  full2m <- dtms_fullfit(data=mensecon,controls=controls,package="mclogit")
-  
-  # Likelihood ratio test, first period
-  llfit1m <- logLik(fit1m)
-  llfull1m <- logLik(full1m)
-  
-  lldiff <- -2 * (llfit1m[1]-llfull1m[1])
-  dftest <- attr(llfull1m,"df")-attr(llfit1m,"df")
-  
-  pchisq(lldiff, df = teststat, lower.tail = FALSE)
-  
-  # Likelihood ratio test, second period
-  llfit2m <- logLik(fit2m)
-  llfull2m <- logLik(full2m)
-  
-  lldiff <- -2 * (llfit2m[1]-llfull2m[1])
-  dftest <- attr(llfull2m,"df")-attr(llfit2m,"df")
-  
-  pchisq(lldiff, df = teststat, lower.tail = FALSE)
-
-
   
