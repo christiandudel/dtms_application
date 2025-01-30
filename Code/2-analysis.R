@@ -3,6 +3,7 @@
   library(dtms)
   library(tidyverse)
   library(lmtest)
+  library(VGAM)
 
 
 ### Load data ##################################################################
@@ -56,15 +57,15 @@
 ### Comparison full vs reduced #################################################
 
   # Controls
-  controls <- c("time","time2")  
+  controls <- c("s(time)","education")  
     
   # Model, reduced
-  fit1m <- dtms_fit(data=men,controls=controls,package="mclogit")
-  fit1w <- dtms_fit(data=women,controls=controls,package="mclogit")
+  fit1m <- dtms_fit(data=men,controls=controls,package="VGAM")
+  fit1w <- dtms_fit(data=women,controls=controls,package="VGAM")
   
   # Model, full
-  full1m <- dtms_fullfit(data=men,controls=controls,package="mclogit")
-  full1w <- dtms_fullfit(data=women,controls=controls,package="mclogit")
+  full1m <- dtms_fullfit(data=men,controls=controls,package="VGAM")
+  full1w <- dtms_fullfit(data=women,controls=controls,package="VGAM")
   
   # Likelihood ratio test, men
   lrtest(fit1m,full1m)
@@ -76,7 +77,7 @@
 ### General settings ###########################################################
   
   # Controls
-  controls <- c("time","time2","education")  
+  controls <- c("s(time)","education")  
   
   # DTMS for prediction
   hrspredict <- dtms(transient=c("not impaired","impaired"),
@@ -229,19 +230,69 @@
   
 ### Main results ###############################################################  
 
-  men_res <- bootfun(data=men,dtms=hrspredict)
-  women_res <- bootfun(data=women,dtms=hrspredict)
+  men_res <- bootfun(data=men,
+                     dtms=hrspredict)
+  
+  women_res <- bootfun(data=women,
+                       dtms=hrspredict)
   
   
 ### Bootstrap ##################################################################
   
-  men_boot <- dtms_boot(data=men,dtms=hrspredict,fun=bootfun,rep=1000,method="block",verbose=T)
-  women_boot <- dtms_boot(data=women,dtms=hrspredict,fun=bootfun,rep=1000,method="block",verbose=T)
+  men_boot <- dtms_boot(data=men,
+                        dtms=hrspredict,
+                        fun=bootfun,
+                        rep=1000,
+                        method="block",
+                        verbose=T)
+  
+  women_boot <- dtms_boot(data=women,
+                          dtms=hrspredict,
+                          fun=bootfun,
+                          rep=1000,
+                          method="block",
+                          verbose=T)
 
 
+### For plotting ###############################################################
+  
+  # Data
+  seconmen <- men |> filter(wave%in%9:15)
+  seconwomen <- women |> filter(wave%in%9:15)
+
+  # Model
+  fit_men <- dtms_fullfit(data=seconmen,controls=controls)
+  fit_women <- dtms_fullfit(data=seconwomen,controls=controls)
+
+  # Predict probabilities
+  probs_low_men <- dtms_transitions(dtms=hrspredict,model=fit_men,controls=low,se=F)
+  probs_med_men <- dtms_transitions(dtms=hrspredict,model=fit_men,controls=med,se=F)
+  probs_hig_men <- dtms_transitions(dtms=hrspredict,model=fit_men,controls=hig,se=F)
+  
+  probs_low_women <- dtms_transitions(dtms=hrspredict,model=fit_women,controls=low,se=F)
+  probs_med_women <- dtms_transitions(dtms=hrspredict,model=fit_women,controls=med,se=F)
+  probs_hig_women <- dtms_transitions(dtms=hrspredict,model=fit_women,controls=hig,se=F)
+  
+  # Select only transitions to impairment 
+  men1 <- probs_low_men |> dtms_simplify() |> filter(from=="not impaired"&to=="impaired") |> mutate(Education="Low" , Gender="Men")
+  men2 <- probs_med_men |> dtms_simplify() |> filter(from=="not impaired"&to=="impaired") |> mutate(Education="Medium" , Gender="Men")
+  men3 <- probs_hig_men |> dtms_simplify() |> filter(from=="not impaired"&to=="impaired") |> mutate(Education="High" , Gender="Men")
+
+  women1 <- probs_low_women |> dtms_simplify() |> filter(from=="not impaired"&to=="impaired") |> mutate(Education="Low" , Gender="Women")
+  women2 <- probs_med_women |> dtms_simplify() |> filter(from=="not impaired"&to=="impaired") |> mutate(Education="Medium" , Gender="Women")
+  women3 <- probs_hig_women |> dtms_simplify() |> filter(from=="not impaired"&to=="impaired") |> mutate(Education="High" , Gender="Women")
+
+  # Combine
+  plotdata <- rbind(men1,men2,men3,women1,women2,women3)
+  plotdata$Gender <- factor(plotdata$Gender,levels=c("Men","Women"))
+  plotdata$Education <- factor(plotdata$Education,levels=c("Low","Medium","High"))
+  
+  #plotdata |> ggplot(aes(x=time,y=P,color=Education)) + geom_line() + facet_wrap(~Gender)
+  
+  
 ### Save results ###############################################################
   
-  save(list=c("men_res","women_res","men_boot","women_boot"),
+  save(list=c("men_res","women_res","men_boot","women_boot","plotdata"),
        file="Results/over_time.Rda")
   
   # If running on workstation
